@@ -46,7 +46,7 @@ Consistent with the Phase 0 Gate Requirements, this acceptance report serves as 
 ## 6. FREE-TIER ASSUMPTIONS
 * Cloudflare Pages remains free with zero egress/bandwidth restrictions.
 * Neon PostgreSQL allows 500MB of storage per database, which is plenty for storing hundreds of hours of textual memories and job payloads.
-* Koyeb/Render provides web application services that scale to zero during idle cycles, which is perfect for conserving early development quotas.
+* Koyeb/Render provides web application services that scale to zero during inactivity, which is perfect for conserving early development quotas.
 
 ---
 

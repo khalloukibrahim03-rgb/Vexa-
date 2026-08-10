@@ -359,11 +359,11 @@ VEXA segments its knowledge base into eight highly structured and isolated memor
 * **Retention/Versioning**: Long-lived config-as-memory. Changes trigger automated validation scripts.
 
 ### 2. TOPIC MEMORY
-* **Contents**: Market trends, search volume tracking, historical competitive performance metrics, topic lifecycle indices (Viral, Steady, Declining), momentum trends.
+* **Contents**: Topic keyword, momentum value, topic lifecycle index, competitive pressure scale, novelty tier, raw signal payload, rejection history metrics, evidence payload, confidence level, timestamp.
 * **Retention/Versioning**: Continuous append logs. Older observations are periodically condensed into summarized trends using AI context compilation.
 
 ### 3. CONTENT MEMORY
-* **Contents**: Previously compiled scripts, exact timelines, visual/audio assets used, prompt definitions, structural outline histories, publication details.
+* **Contents**: Previously compiled scripts, exact scene outlines, visual/audio asset structures, production parameters, metadata blocks, publication states.
 * **Retention/Versioning**: Permanent history. Crucial for ensuring duplicate content check loops prevent self-plagiarism.
 
 ### 4. AUDIENCE MEMORY
@@ -371,7 +371,7 @@ VEXA segments its knowledge base into eight highly structured and isolated memor
 * **Retention/Versioning**: Weekly aggregation logs. No storage of individual PII (Personally Identifiable Information).
 
 ### 5. PERFORMANCE MEMORY
-* **Contents**: CTR (Click-Through Rate), Impressions, Average View Duration (AVD), retention graphs, subscriber conversion indicators.
+* **Contents**: Views count, CTR (Click-Through Rate), Impressions, Average View Duration (AVD), retention graphs, subscriber conversion indicators, prediction vs actual analytics delta.
 * **Retention/Versioning**: Permanent numerical matrices keyed by content ID, structured specifically for ingestion by strategy recalculation loops.
 
 ### 6. STRATEGY MEMORY
