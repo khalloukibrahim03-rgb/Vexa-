@@ -1,0 +1,150 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  PAUSED
+  COMPLETED
+  FAILED
+  RETRYING
+  DEAD_LETTER
+}
+
+enum DecisionOutcome {
+  PRODUCE
+  RESEARCH_MORE
+  DO_NOTHING
+  REVISE_STRATEGY
+  PAUSE_FOR_HUMAN
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  channels     Channel[]
+}
+
+model Channel {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  platform        String            // "YOUTUBE", "TIKTOK", etc.
+  platformId      String
+  name            String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  decisions       DecisionRecord[]
+  memories        MemoryEntry[]
+  strategies      StrategyVersion[]
+}
+
+model DecisionRecord {
+  id                  String          @id @default(uuid())
+  channelId           String
+  channel             Channel         @relation(fields: [channelId], references: [id])
+  decision            DecisionOutcome
+  timestamp           DateTime        @default(now())
+  context             Json            // Active factors and sensory inputs
+  evidence            Json            // Key data points triggering decision
+  confidenceScore     Float
+  alternatives        Json            // Alternative pathways evaluated
+  rejectionReasons    String[]
+  expectedOutcome     String?
+  predictedMetrics    Json?
+  strategyVersionId   String
+  strategyVersion     StrategyVersion @relation(fields: [strategyVersionId], references: [id])
+  actualOutcome       String?
+  correlationId       String          @unique @default(uuid())
+  jobs                Job[]
+}
+
+model MemoryEntry {
+  id         String   @id @default(uuid())
+  channelId  String
+  channel    Channel  @relation(fields: [channelId], references: [id])
+  category   String   // "CHANNEL", "TOPIC", "CONTENT", "AUDIENCE", "PERFORMANCE", "STRATEGY", "FAILURE", "EXPERIMENT"
+  key        String   @unique
+  version    Int      @default(1)
+  data       Json     // Arbitrary category payload
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  jobs       Job[]    // Related job connection
+}
+
+model Job {
+  id             String         @id @default(uuid())
+  parentJobId    String?
+  parentJob      Job?           @relation("JobHierarchy", fields: [parentJobId], references: [id])
+  childJobs      Job[]          @relation("JobHierarchy")
+  decisionId     String?
+  decision       DecisionRecord? @relation(fields: [decisionId], references: [id])
+  memoryEntryId  String?
+  memoryEntry    MemoryEntry?   @relation(fields: [memoryEntryId], references: [id])
+  correlationId  String
+  status         JobStatus      @default(QUEUED)
+  priority       Int            @default(0)
+  payload        Json
+  result         Json?
+  retryCount     Int            @default(0)
+  maxRetries     Int            @default(3)
+  leaseExpiry    DateTime?
+  heartbeatAt    DateTime?
+  idempotencyKey String         @unique
+  errorMessage   String?
+  errorStack     String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  qcResults      QCResult[]
+
+  @@index([status])
+  @@index([parentJobId])
+}
+
+model QCResult {
+  id          String   @id @default(uuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id])
+  gateName    String   // "FACTUAL", "SAFETY", "COPYRIGHT", "TECHNICAL", etc.
+  passed      Boolean
+  score       Float
+  details     Json     // Discovered errors, risk markers
+  checkedAt   DateTime @default(now())
+}
+
+model StrategyVersion {
+  id          String           @id @default(uuid())
+  channelId   String
+  channel     Channel          @relation(fields: [channelId], references: [id])
+  version     Int
+  rules       Json             // Object mapping goals to strict parameters
+  thresholds  Json             // Threshold values for triggering pipeline
+  isActive    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  decisions   DecisionRecord[]
+  experiments Experiment[]
+}
+
+model Experiment {
+  id                String          @id @default(uuid())
+  strategyVersionId String
+  strategyVersion   StrategyVersion @relation(fields: [strategyVersionId], references: [id])
+  name              String
+  hypothesis        String
+  variables         Json
+  expectedResult    String
+  actualResult      String?
+  isCompleted       Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  completedAt       DateTime?
+}

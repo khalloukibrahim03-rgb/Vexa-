@@ -1,0 +1,30 @@
+{
+  "name": "vexa",
+  "version": "1.0.0",
+  "description": "VEXA - Autonomous AI Content Intelligence & Production Platform",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^9.2.0",
+    "prettier": "^3.2.5",
+    "prisma": "^5.14.0",
+    "supertest": "^7.2.2",
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.10"
+  }
+}
