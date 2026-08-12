@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "prisma generate && tsc",
-    "db:generate": "prisma generate",
+    "build": "prisma generate --schema=prisma/schema.prisma && tsc",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
     "db:format": "prisma format"
   },
   "dependencies": {

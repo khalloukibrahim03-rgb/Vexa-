@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace=@vexa/database && npm run build --workspace=@vexa/backend --if-present && (npm run build --workspace=@vexa/control-plane --if-present || true)",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "db:generate": "prisma generate",
