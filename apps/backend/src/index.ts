@@ -30,7 +30,7 @@ app.use('/api/v1/agent', agentRouter);
 
 // Listen
 const port = env.PORT || 3001;
-const server = app.listen(port, () => {
+const server = app.listen(port, '0.0.0.0', () => {
   logger.info(`🚀 VEXA Backend Server running on port ${port} in ${env.NODE_ENV} mode`);
 });
 
