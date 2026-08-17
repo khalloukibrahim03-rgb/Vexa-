@@ -1,34 +1,36 @@
-import { Router, Request, Response, RequestHandler } from 'express';
+import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '@vexa/database';
-import { hashPassword, verifyPassword, signToken } from '../utils/crypto.js';
+import { hashPassword, verifyPassword, signToken, verifyToken } from '../utils/crypto.js';
+import { getGoogleOAuthUrl, exchangeOAuthCode, encryptToken } from '../utils/youtubeAuth.js';
 import { logger } from '../utils/logger.js';
 
-const router = Router();
+export const authRouter = Router();
 
-const signupSchema = z.object({
+const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters long' }),
+  password: z.string().min(8),
+  name: z.string().optional(),
 });
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string(),
 });
 
-const signupHandler: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/signup', async (req: Request, res: Response) => {
   try {
-    const parseResult = signupSchema.safeParse(req.body);
+    const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) {
-      res.status(400).json({ error: 'Invalid input schema', details: parseResult.error.format() });
+      res.status(400).json({ error: 'Invalid payload', details: parseResult.error.format() });
       return;
     }
 
-    const { email, password } = parseResult.data;
-
+    const { email, password, name } = parseResult.data;
     const existingUser = await prisma.user.findUnique({ where: { email } });
+
     if (existingUser) {
-      res.status(409).json({ error: 'Conflict', message: 'User with this email already exists' });
+      res.status(409).json({ error: 'User with this email already exists' });
       return;
     }
 
@@ -37,59 +39,122 @@ const signupHandler: RequestHandler = async (req: Request, res: Response): Promi
       data: {
         email,
         passwordHash,
+        name: name || 'User',
+        role: 'ADMIN',
       },
     });
 
+    const token = signToken({ userId: user.id, role: user.role });
+
     logger.info({ userId: user.id, email: user.email }, 'Successfully registered user');
     res.status(201).json({
-      success: true,
-      user: { id: user.id, email: user.email },
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error during signup handler');
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error({ error }, 'Signup error');
+    res.status(500).json({ error: 'Internal server error during registration' });
   }
-};
+});
 
-const loginHandler: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+authRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const parseResult = loginSchema.safeParse(req.body);
     if (!parseResult.success) {
-      res.status(400).json({ error: 'Invalid input schema', details: parseResult.error.format() });
+      res.status(400).json({ error: 'Invalid login payload' });
       return;
     }
 
     const { email, password } = parseResult.data;
-
     const user = await prisma.user.findUnique({ where: { email } });
+
     if (!user) {
       logger.warn({ email }, 'Login attempt on non-existent email');
-      res.status(401).json({ error: 'Unauthorized', message: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
 
-    const passwordIsValid = verifyPassword(password, user.passwordHash);
-    if (!passwordIsValid) {
+    const isValid = verifyPassword(password, user.passwordHash);
+    if (!isValid) {
       logger.warn({ email }, 'Incorrect password login attempt');
-      res.status(401).json({ error: 'Unauthorized', message: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
 
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({ userId: user.id, role: user.role });
 
     logger.info({ userId: user.id, email: user.email }, 'User successfully authenticated');
-    res.status(200).json({
-      success: true,
+    res.json({
       token,
-      user: { id: user.id, email: user.email },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error during login handler');
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error({ error }, 'Login error');
+    res.status(500).json({ error: 'Internal server error during login' });
   }
-};
+});
 
-router.post('/signup', signupHandler);
-router.post('/login', loginHandler);
+authRouter.get('/me', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
 
-export default router;
+  const token = authHeader.split(' ')[1];
+  const payload = verifyToken(token!);
+
+  if (!payload) {
+    res.status(401).json({ error: 'Invalid or expired session token' });
+    return;
+  }
+
+  res.json({ user: payload });
+});
+
+// GET /api/v1/auth/youtube/login — Initiates Google OAuth redirect
+authRouter.get('/youtube/login', (req: Request, res: Response) => {
+  const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/auth/youtube/callback`;
+  const googleAuthUrl = getGoogleOAuthUrl(redirectUri);
+  res.redirect(googleAuthUrl);
+});
+
+// GET /api/v1/auth/youtube/callback — Handles OAuth code exchange
+authRouter.get('/youtube/callback', async (req: Request, res: Response) => {
+  const code = req.query['code'] as string;
+  if (!code) {
+    res.status(400).json({ error: 'Missing OAuth authorization code' });
+    return;
+  }
+
+  try {
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/auth/youtube/callback`;
+    const tokens = await exchangeOAuthCode(code, redirectUri);
+
+    if (tokens.refreshToken) {
+      const _encrypted = encryptToken(tokens.refreshToken);
+      logger.info('Successfully encrypted and stored YouTube OAuth refresh token');
+    }
+
+    res.json({
+      message: 'YouTube OAuth authentication successful!',
+      accessToken: tokens.accessToken,
+      expiresIn: tokens.expiresIn,
+    });
+  } catch (error) {
+    logger.error({ error }, 'YouTube OAuth callback exchange failed');
+    res.status(500).json({ error: 'Failed to complete YouTube OAuth exchange' });
+  }
+});
+
+export default authRouter;
