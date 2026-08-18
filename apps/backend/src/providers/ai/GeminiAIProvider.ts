@@ -5,7 +5,7 @@ export class GeminiAIProvider implements IAIProvider {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey?: string, model = 'gemini-1.5-flash') {
+  constructor(apiKey?: string, model = 'gemini-3.6-flash') {
     this.apiKey = apiKey || process.env['GEMINI_API_KEY'] || '';
     this.model = model;
     if (!this.apiKey) {
