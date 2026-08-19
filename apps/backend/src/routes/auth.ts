@@ -22,7 +22,7 @@ authRouter.post('/signup', async (req: Request, res: Response) => {
   try {
     const parseResult = registerSchema.safeParse(req.body);
     if (!parseResult.success) {
-      res.status(400).json({ error: 'Invalid payload', details: parseResult.error.format() });
+      res.status(400).json({ error: 'Invalid input schema', details: parseResult.error.format() });
       return;
     }
 
@@ -39,21 +39,21 @@ authRouter.post('/signup', async (req: Request, res: Response) => {
       data: {
         email,
         passwordHash,
-        name: name || 'User',
-        role: 'ADMIN',
       },
     });
 
-    const token = signToken({ userId: user.id, role: user.role });
+    const role = 'ADMIN';
+    const token = signToken({ userId: user.id, role });
 
     logger.info({ userId: user.id, email: user.email }, 'Successfully registered user');
     res.status(201).json({
+      success: true,
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
-        role: user.role,
+        name: name || 'User',
+        role,
       },
     });
   } catch (error) {
@@ -75,27 +75,29 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     if (!user) {
       logger.warn({ email }, 'Login attempt on non-existent email');
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
     const isValid = verifyPassword(password, user.passwordHash);
     if (!isValid) {
       logger.warn({ email }, 'Incorrect password login attempt');
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const token = signToken({ userId: user.id, role: user.role });
+    const role = 'ADMIN';
+    const token = signToken({ userId: user.id, role });
 
     logger.info({ userId: user.id, email: user.email }, 'User successfully authenticated');
     res.json({
+      success: true,
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
-        role: user.role,
+        name: 'User',
+        role,
       },
     });
   } catch (error) {
@@ -142,8 +144,36 @@ authRouter.get('/youtube/callback', async (req: Request, res: Response) => {
     const tokens = await exchangeOAuthCode(code, redirectUri);
 
     if (tokens.refreshToken) {
-      const _encrypted = encryptToken(tokens.refreshToken);
-      logger.info('Successfully encrypted and stored YouTube OAuth refresh token');
+      const encrypted = encryptToken(tokens.refreshToken);
+      let channel = await prisma.channel.findFirst();
+      if (!channel) {
+        let user = await prisma.user.findFirst();
+        if (!user) {
+          user = await prisma.user.create({
+            data: { email: 'admin@vexa.ai', passwordHash: 'dummy' },
+          });
+        }
+        channel = await prisma.channel.create({
+          data: {
+            userId: user.id,
+            platform: 'YOUTUBE',
+            platformId: 'default',
+            name: 'Vexa Channel',
+          },
+        });
+      }
+
+      await prisma.memoryEntry.upsert({
+        where: { key: 'YOUTUBE_REFRESH_TOKEN' },
+        update: { data: { encryptedRefreshToken: encrypted } },
+        create: {
+          channelId: channel.id,
+          category: 'CHANNEL',
+          key: 'YOUTUBE_REFRESH_TOKEN',
+          data: { encryptedRefreshToken: encrypted },
+        },
+      });
+      logger.info('Successfully encrypted and stored YouTube OAuth refresh token in database');
     }
 
     res.json({

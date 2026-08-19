@@ -1,0 +1,44 @@
+name: Produce Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      jobId:
+        description: 'The Postgres Job ID to produce and publish'
+        required: true
+        type: string
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure FFmpeg is installed
+        run: |
+          if ! command -v ffmpeg &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version
+
+      - name: Run cloud production script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          FREESOUND_API_KEY: ${{ secrets.FREESOUND_API_KEY }}
+        run: npx tsx scripts/cloud-produce.ts jobId=${{ github.event.inputs.jobId }}
