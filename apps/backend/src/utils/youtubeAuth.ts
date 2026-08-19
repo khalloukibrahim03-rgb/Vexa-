@@ -89,3 +89,35 @@ export async function exchangeOAuthCode(code: string, redirectUri: string): Prom
     expiresIn: json.expires_in,
   };
 }
+
+/**
+ * Uses a YouTube OAuth refresh token to obtain a fresh access token.
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<string> {
+  const clientId = process.env['YOUTUBE_CLIENT_ID'] || '';
+  const clientSecret = process.env['YOUTUBE_CLIENT_SECRET'] || '';
+
+  if (!clientId || !clientSecret) {
+    throw new Error('YOUTUBE_CLIENT_ID or YOUTUBE_CLIENT_SECRET is missing.');
+  }
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error({ status: response.status, errorText }, 'OAuth refresh token exchange failed');
+    throw new Error(`Google OAuth Refresh Token Error (${response.status}): ${errorText}`);
+  }
+
+  const json = await response.json();
+  return json.access_token;
+}

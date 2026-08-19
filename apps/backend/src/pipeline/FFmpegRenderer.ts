@@ -24,7 +24,7 @@ export class FFmpegRenderer {
     // Input 0: Visual layers (compiled together)
     // Input 1: Narration Dialogue Speech Track
     // Input 2: Background Ambient Music Track
-    args.push('-i', 'temp_visual_concat.txt');
+    args.push('-f', 'concat', '-safe', '0', '-i', 'temp_visual_concat.txt');
     args.push('-i', narrationAudioPath);
     args.push('-i', backgroundMusicPath);
 
