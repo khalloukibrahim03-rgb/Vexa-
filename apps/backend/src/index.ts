@@ -22,7 +22,7 @@ app.use((req, _res, next) => {
 
 // Basic Root Status Check
 app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Mounted Routes

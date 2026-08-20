@@ -36,7 +36,8 @@ describe('VEXA Backend API Integration Tests', () => {
   it('should return 200 OK on health check', async () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe('OK');
+    expect(res.body.status).toBe('ok');
+    expect(res.body.timestamp).toBeDefined();
   });
 
   it('should return agent status and initial MANUAL mode configuration', async () => {

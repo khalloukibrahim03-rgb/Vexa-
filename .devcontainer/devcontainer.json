@@ -1,0 +1,14 @@
+{
+  "name": "VEXA Development Container",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "postCreateCommand": "npm install",
+  "postStartCommand": "npm run build --workspace=@vexa/backend && (npm run start --workspace=@vexa/backend > /tmp/backend.log 2>&1 &)",
+  "portsAttributes": {
+    "3001": {
+      "label": "Backend API",
+      "visibility": "public",
+      "onAutoForward": "notify"
+    }
+  },
+  "forwardPorts": [3001]
+}
