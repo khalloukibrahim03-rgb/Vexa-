@@ -40,6 +40,17 @@ describe('VEXA Backend API Integration Tests', () => {
     expect(res.body.timestamp).toBeDefined();
   });
 
+  it('should construct HTTPS redirectUri with forwarded headers on /youtube/login', async () => {
+    const res = await request(app)
+      .get('/api/v1/auth/youtube/login')
+      .set('x-forwarded-proto', 'https')
+      .set('x-forwarded-host', 'vexa-app.onrender.com');
+
+    expect(res.status).toBe(302);
+    const location = res.headers.location;
+    expect(location).toContain(encodeURIComponent('https://vexa-app.onrender.com/api/v1/auth/youtube/callback'));
+  });
+
   it('should return agent status and initial MANUAL mode configuration', async () => {
     const res = await request(app).get('/api/v1/agent/status');
     expect(res.status).toBe(200);

@@ -124,9 +124,16 @@ authRouter.get('/me', (req: Request, res: Response) => {
   res.json({ user: payload });
 });
 
+// Helper to construct absolute redirect URI respecting reverse proxies
+const getRedirectUri = (req: Request): string => {
+  const proto = req.get('x-forwarded-proto') || req.protocol;
+  const host = req.get('x-forwarded-host') || req.get('host');
+  return `${proto}://${host}/api/v1/auth/youtube/callback`;
+};
+
 // GET /api/v1/auth/youtube/login — Initiates Google OAuth redirect
 authRouter.get('/youtube/login', (req: Request, res: Response) => {
-  const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/auth/youtube/callback`;
+  const redirectUri = getRedirectUri(req);
   const googleAuthUrl = getGoogleOAuthUrl(redirectUri);
   res.redirect(googleAuthUrl);
 });
@@ -140,7 +147,7 @@ authRouter.get('/youtube/callback', async (req: Request, res: Response) => {
   }
 
   try {
-    const redirectUri = `${req.protocol}://${req.get('host')}/api/v1/auth/youtube/callback`;
+    const redirectUri = getRedirectUri(req);
     const tokens = await exchangeOAuthCode(code, redirectUri);
 
     if (tokens.refreshToken) {
