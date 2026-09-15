@@ -5,9 +5,10 @@ export class GrokAIProvider implements IAIProvider {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey?: string, model = 'grok-beta') {
+  constructor(apiKey?: string, model?: string) {
     this.apiKey = apiKey || process.env['GROK_API_KEY'] || '';
-    this.model = model;
+    const isGroq = this.apiKey.startsWith('gsk_');
+    this.model = model || (isGroq ? 'groq/compound' : 'grok-beta');
     if (!this.apiKey) {
       logger.warn('GrokAIProvider initialized without GROK_API_KEY.');
     }
@@ -20,7 +21,10 @@ export class GrokAIProvider implements IAIProvider {
 
     logger.info({ provider: 'GrokAIProvider', model: this.model }, 'Generating text from Grok API');
 
-    const url = 'https://api.x.ai/v1/chat/completions';
+    const isGroq = this.apiKey.startsWith('gsk_');
+    const url = isGroq
+      ? 'https://api.groq.com/openai/v1/chat/completions'
+      : 'https://api.x.ai/v1/chat/completions';
 
     const messages: any[] = [];
 
