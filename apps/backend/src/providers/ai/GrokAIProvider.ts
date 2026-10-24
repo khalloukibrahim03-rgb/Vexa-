@@ -18,9 +18,17 @@ export class GrokAIProvider implements IAIProvider {
       throw new Error('GROK_API_KEY is missing.');
     }
 
-    logger.info({ provider: 'GrokAIProvider', model: this.model }, 'Generating text from Grok API');
+    let url = 'https://api.x.ai/v1/chat/completions';
+    let targetModel = this.model;
 
-    const url = 'https://api.x.ai/v1/chat/completions';
+    if (this.apiKey.startsWith('gsk_')) {
+      url = 'https://api.groq.com/openai/v1/chat/completions';
+      if (targetModel === 'grok-beta') {
+        targetModel = 'openai/gpt-oss-20b';
+      }
+    }
+
+    logger.info({ provider: 'GrokAIProvider', model: targetModel, endpoint: url }, 'Generating text from Grok API');
 
     const messages: any[] = [];
 
@@ -37,7 +45,7 @@ export class GrokAIProvider implements IAIProvider {
     });
 
     const body: any = {
-      model: this.model,
+      model: targetModel,
       messages,
       temperature: options?.temperature !== undefined ? options.temperature : 0.7,
     };
