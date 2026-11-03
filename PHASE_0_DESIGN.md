@@ -590,11 +590,22 @@ To build VEXA safely at $0 hosting costs during initial development, we structur
 
 | Dependency | Classification | Limit details / Cost implications | Mitigations / Mock Strategy |
 | :--- | :--- | :--- | :--- |
-| **Google Gemini API** | LIMITED FREE | Free tier allows 15 RPM (Requests Per Minute) on flash models. | Fallback to mock interface wrapper when limit breached. |
-| **OpenAI API** | REQUIRES PAYMENT | Pay-per-token structure. No true free tier. | *MUST MOCK* during development. Enable live calls only inside specific integration test cases. |
+| **Google Gemini API** | LIMITED FREE | Free tier allows 15 RPM (Requests Per Minute) on flash models; subject to rate changes. | FallbackAIProvider switches to secondary provider or mock interface wrapper when limit breached. |
+| **Groq Cloud API** | LIMITED FREE | High token-per-second free tier on select open-weights models (Llama, Gemma). | MOCKABLE. Decoupled behind IAIProvider interface. |
+| **xAI Grok API** | REQUIRES PAYMENT | Token-based billing. | OPTIONAL / MOCKABLE. Kept behind IAIProvider interface; never hard-coded. |
+| **OpenAI API** | REQUIRES PAYMENT | Pay-per-token structure. No true ongoing free tier. | *MUST MOCK* during development. Enable live calls only inside specific integration test cases. |
+| **Anthropic Claude API**| REQUIRES PAYMENT | Pay-per-token structure. | OPTIONAL / MOCKABLE. Kept behind abstract IAIProvider. |
 | **Neon Postgres** | LIMITED FREE | 0.5 GiB of storage, 1 active project, automatic scale-to-zero. | Strict cleanup cron jobs running inside the database to prune old logs and execution payloads. |
-| **Cloudflare R2** | LIMITED FREE | 10 GB storage per month, 1M Class A operations, 10M Class B. | Aggressive object lifecycle policies to automatically clean up raw generated video frames after 48 hours. |
-| **YouTube API** | LIMITED FREE | 10,000 units/day quota default. | Implemented as mock adapters with local file mocks for development; real calls reserved for verified builds. |
+| **Supabase Postgres & Storage** | LIMITED FREE | 500MB DB, 1GB file storage, 50k monthly active users. | OPTIONAL / MOCKABLE. Database schema managed by standard SQL/Prisma migrations. |
+| **Cloudflare Pages** | FREE | Unlimited requests, free SSL, global edge CDN. | Default hosting layer for Control Plane Web Dashboard. |
+| **Cloudflare R2** | LIMITED FREE | 10 GB storage per month, 1M Class A operations, 10M Class B ($0 egress). | Aggressive object lifecycle policies to automatically clean up raw generated video frames after 48 hours. |
+| **Render / Koyeb** | LIMITED FREE | Free web service instances with monthly active hours; scale to zero during inactivity. | Web server can be hosted locally or on free cloud compute tiers. |
+| **GitHub Actions** | LIMITED FREE | 2,000 free runner minutes/month for public/free repositories. | Video rendering runs on-demand via workflow_dispatch; fallback to local headless ffmpeg. |
+| **YouTube Data v3 & Upload API** | LIMITED FREE / REQUIRES CURRENT EXTERNAL VERIFICATION | 10,000 units/day default project quota. Video upload costs 1,600 units. | Implemented behind IPublishingProvider and IResearchProvider; default to MOCKED / SIMULATED in test environments. |
+| **ElevenLabs / Commercial TTS** | REQUIRES PAYMENT | Small trial tier, subscription required for commercial synthesis. | OPTIONAL / MOCKABLE. Cloud runner uses local `@xenova/transformers` (SpeechT5) or Edge-TTS at $0 cost. |
+| **Local Transformers.js (TTS)** | FREE | Open-source in-process synthesis executed via ONNX Runtime / WASM. | Primary $0 TTS audio generation path; runs fully offline without API keys. |
+| **Pexels / Pixabay / Unsplash API** | LIMITED FREE | Free API keys with hourly rate limits (e.g. 200 requests/hour). | OPTIONAL / MOCKABLE. Cache assets locally by keyword to avoid duplicate requests. |
+| **Upstash Redis** | LIMITED FREE | 10,000 requests/day free tier. Easy to exhaust with high-frequency queue polling. | Replaced by PostgreSQL Transactional Queue (`FOR UPDATE SKIP LOCKED`) at $0 cost and unlimited ops. |
 
 ---
 

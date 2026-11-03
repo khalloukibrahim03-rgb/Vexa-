@@ -6,9 +6,12 @@ Consistent with the Phase 0 Gate Requirements, this acceptance report serves as 
 
 ## 1. WHAT IS CONFIRMED
 * **Scope Isolation**: We are exclusively building a Web Application with a backend orchestrator. Mobile (Android) is strictly out of scope.
-* **Agent Execution loop**: VEXA will run on a state-based cyclical loop (Research → Analyze → Memory Update → Decider Run → Act or Sleep). Generative text outputs from direct prompts are not the product focus.
-* **Interface Decoupling**: All critical third-party systems (AI engines, YouTube publishing, external research aggregators) sit behind strict, abstract TS interfaces. The internal Agent Brain depends solely on interfaces, not implementations.
-* **$0 Infrastructure Setup**: It is verified that we can deploy and maintain development and preview environments with approximately $0 hosting cost by leveraging Cloudflare Pages, Koyeb/Render, and Neon/Supabase PostgreSQL free tiers.
+* **Control vs Execution Plane**: Strict separation enforced between Control Plane (Web Dashboard UI with zero secrets) and Execution Plane (Backend, Database, Agent Brain, Queues).
+* **Agent Execution loop**: VEXA will run on a state-based cyclical loop (Research → Analyze → Memory Update → Decider Run → Act or Sleep). Generative text outputs from direct prompts are not the product focus. `DO_NOTHING` is a first-class, valid decision.
+* **Decision Auditing**: Every decision produces an immutable, correlated `DecisionRecord` storing context, evidence, confidence, alternatives considered, and expected outcomes.
+* **Interface Decoupling**: All critical third-party systems (AI engines, YouTube publishing, external research aggregators) sit behind strict, abstract TS interfaces (`IAIProvider`, `IResearchProvider`, `IPublishingProvider`, `IVideoGenerationProvider`, etc.). The internal Agent Brain depends solely on interfaces, not concrete implementations.
+* **$0 Infrastructure Setup**: Verified that we can deploy and maintain development and preview environments with approximately $0 hosting cost by leveraging Cloudflare Pages, Koyeb/Render, GitHub Actions runner minutes, and Neon/Supabase PostgreSQL free tiers.
+* **Zero Premature Microservices**: Architecture is designed as a clean, highly modular monolith in TypeScript.
 
 ---
 
